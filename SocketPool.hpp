@@ -5,30 +5,6 @@
 #include "ThreadPool/ThreadPool.h"
 #include "Pollster.hpp"
 
-class EchoHandler : public Pollster::Handler {
-	public:
-		void operator()(int fd){
-			std::string data(8193, 0);
-			int rcvd = recv(fd, &data[0], 8192, MSG_DONTWAIT);
-			if( rcvd == -1){
-				throw std::runtime_error("Unable to read from socket");
-			}else{
-			#ifndef SO_NOSIGPIPE
-				send(fd, &data[0], rcvd, MSG_DONTWAIT | MSG_NOSIGNAL);
-			#else
-				send(fd, &data[0], rcvd, MSG_DONTWAIT);
-			#endif
-			}
-		}
-		void disconnect(int fd, std::string reason){
-			#ifndef SO_NOSIGPIPE
-				send(fd, &reason[0], reason.length(), MSG_DONTWAIT | MSG_NOSIGNAL);
-			#else
-				send(fd, &reason[0], reason.length(), MSG_DONTWAIT);
-			#endif
-			close(fd);
-		}
-};
 class SocketPool {
 public:
 	SocketPool(unsigned short port, const char* addr, int max_Clients, int max_Threads, Pollster::Handler& T):sock(socket(PF_INET, SOCK_STREAM, 0)), handler(T), cliPerPollster(max_Clients/max_Threads), pollsters(max_Threads), pool(max_Threads){
