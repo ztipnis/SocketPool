@@ -5,9 +5,18 @@
 #include "ThreadPool/ThreadPool.h"
 #include "Pollster.hpp"
 
+inline void send(int fd, std::string data, int length){
+	#ifndef SO_NOSIGPIPE
+		send(fd, &data[0], length, MSG_DONTWAIT | MSG_NOSIGNAL);
+	#else
+		send(fd, &data[0], length, MSG_DONTWAIT);
+	#endif
+}
+
 class SocketPool {
 public:
-	SocketPool(unsigned short port, const char* addr, int max_Clients, int max_Threads, Pollster::Handler& T):sock(socket(PF_INET, SOCK_STREAM, 0)), handler(T), cliPerPollster(max_Clients/max_Threads), pollsters(max_Threads), pool(max_Threads){
+	SocketPool(unsigned short port, const char* addr, int max_Clients, int max_Threads, const Pollster::Handler& T):sock(socket(PF_INET, SOCK_STREAM, 0)), handler(T), cliPerPollster(max_Clients/max_Threads), pollsters(max_Threads), pool(max_Threads){
+		p.reserve(max_Threads);
 		sockaddr_in sockopt;
 		if(sock < 0){
 			throw std::runtime_error("Unable to create socket");
@@ -78,7 +87,7 @@ private:
    		}
 	}
 	int sock;
-	Pollster::Handler& handler;
+	const Pollster::Handler& handler;
 	std::vector<Pollster::Pollster> p;
 	int cliPerPollster;
 	int pollsters;

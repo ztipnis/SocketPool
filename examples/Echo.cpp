@@ -1,14 +1,15 @@
 #import "../SocketPool.hpp"
-#import <iomanip>
+
 
 class EchoHandler : public Pollster::Handler {
 	public:
-		void operator()(int fd){
+		void operator()(int fd) const{
 			std::string data(8193, 0);
 			int rcvd = recv(fd, &data[0], 8192, MSG_DONTWAIT);
 			if( rcvd == -1){
 				throw std::runtime_error("Unable to read from socket");
 			}else{
+				data.resize(rcvd);
 			#ifndef SO_NOSIGPIPE
 				send(fd, &data[0], rcvd, MSG_DONTWAIT | MSG_NOSIGNAL);
 			#else
@@ -16,7 +17,7 @@ class EchoHandler : public Pollster::Handler {
 			#endif
 			}
 		}
-		void disconnect(int fd, std::string reason){
+		void disconnect(int fd, std::string reason) const{
 			#ifndef SO_NOSIGPIPE
 				send(fd, &reason[0], reason.length(), MSG_DONTWAIT | MSG_NOSIGNAL);
 			#else
@@ -24,6 +25,7 @@ class EchoHandler : public Pollster::Handler {
 			#endif
 			close(fd);
 		}
+		void connect(int fd) const{}
 };
 
 int main(int argc, char* argv[]){

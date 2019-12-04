@@ -21,10 +21,10 @@ namespace Pollster{
 			last_cmd = std::chrono::system_clock::now();
 		}
 
-		bool operator==(int f){
+		bool operator==(int f) const{
 			return fd == f;
 		}
-		bool hasExpired(std::chrono::milliseconds timeout){
+		bool hasExpired(std::chrono::milliseconds timeout) const{
 			auto nw =  std::chrono::system_clock::now();
 			return std::chrono::duration_cast<std::chrono::milliseconds>(nw-last_cmd) >= timeout; 
 		}
@@ -33,16 +33,20 @@ namespace Pollster{
 
 	class Handler{
 	public:
-		virtual void operator()(int fd) = 0;
-		virtual void disconnect(int fd, std::string reason) = 0;
+		virtual void operator()(int fd) const = 0;
+		virtual void disconnect(int fd, std::string reason) const = 0;
+		virtual void connect(int fd) const = 0;
 	};
 
 	class Pollster{
 	public:
-		Pollster(unsigned int max_clients, Handler& t) : kq(kqueue()), clients_max(max_clients), T(t){
+		Pollster(unsigned int max_clients, const Handler& t) : kq(kqueue()), clients_max(max_clients), T(t){
 			if(kq == -1){
 				throw std::runtime_error("Unable to start pollster");
 			}
+		}
+		Pollster(Pollster&& other) : kq(std::move(other.kq)), clients(std::move(other.clients)), clients_max(other.clients_max), timeout(other.timeout), T(other.T), evSet(other.evSet) {
+			other.kq = -1;
 		}
 		~Pollster(){
 			for(int i = 0; i < clients.size(); i++){
@@ -53,7 +57,7 @@ namespace Pollster{
 		void operator()() { loop(); }
 		void operator()(ThreadPool& pool){ auto result = pool.enqueue( [](Pollster* t){t->loop();}, this); }
 		Pollster& operator=(const Pollster& p) = delete;
-		bool canAddClient(){
+		bool canAddClient() const{
 			return clients.size() < clients_max;
 		}
 		bool addClient(int fd);
@@ -61,7 +65,7 @@ namespace Pollster{
 		void setTimeout(std::chrono::milliseconds tout){
 			timeout = tout;
 		}
-		void check_timeout(){
+		void cleanup(){
 			if(timeout.count() <= 0) return;
 			for(int i = 0; i < clients.size(); i++){
 				if(clients[i].hasExpired(timeout)){
@@ -74,13 +78,14 @@ namespace Pollster{
 		std::vector<client> clients;
 		unsigned int clients_max;
 		std::chrono::milliseconds timeout;
-		Handler& T;
+		const Handler& T;
 		void loop();
 		struct kevent evSet;
 	};
 
 
 	bool Pollster::addClient(int fd){
+		T.connect(fd);
 		EV_SET(&evSet, fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
 		if(kevent(kq, &evSet, 1, NULL, 0, NULL) != -1){
 			client c(fd);
