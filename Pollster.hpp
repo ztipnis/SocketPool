@@ -34,7 +34,7 @@ namespace Pollster{
 	class Handler{
 	public:
 		virtual void operator()(int fd) const = 0;
-		virtual void disconnect(int fd, std::string reason) const = 0;
+		virtual void disconnect(int fd, const std::string &reason) const = 0;
 		virtual void connect(int fd) const = 0;
 	};
 
