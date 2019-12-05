@@ -1,9 +1,20 @@
-#include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h> 
 #include <arpa/inet.h>
 #include "ThreadPool/ThreadPool.h"
 #include "Pollster.hpp"
+
+#ifndef __SOCKET_POOL_H__
+#define __SOCKET_POOL_H__
+
+
+inline void send(int fd, std::string data, int length){
+	#ifndef SO_NOSIGPIPE
+		send(fd, &data[0], length, MSG_DONTWAIT | MSG_NOSIGNAL);
+	#else
+		send(fd, &data[0], length, MSG_DONTWAIT);
+	#endif
+}
 
 class SocketPool {
 public:
@@ -18,3 +29,5 @@ private:
 	int pollsters;
 	ThreadPool pool;
 };
+
+#endif
