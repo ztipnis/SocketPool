@@ -4,8 +4,12 @@
 #include <ctime>
 #include <string>
 #include <vector>
-#include <iostream>
+// #include <iostream>
 #include "ThreadPool/ThreadPool.h"
+
+#ifndef __POLLSTER_H__
+#define __POLLSTER_H__
+
 
 namespace Pollster{
 
@@ -127,6 +131,7 @@ namespace Pollster{
 	    				auto it = std::find(clients.begin(), clients.end(), fd);
 	    				if(it != clients.end()){
 							clients.erase(it);
+							T.disconnect(fd, "Client Disconnect");
 							close(fd);
 						}
 	    			}
@@ -137,3 +142,5 @@ namespace Pollster{
 	    }
 	}
 }
+
+#endif
