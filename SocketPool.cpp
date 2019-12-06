@@ -1,3 +1,4 @@
+#import "SocketPool.hpp"
 inline void send(int fd, std::string data, int length){
 	#ifndef SO_NOSIGPIPE
 		send(fd, &data[0], length, MSG_DONTWAIT | MSG_NOSIGNAL);
@@ -72,7 +73,7 @@ void SocketPool::accept(){
 				if(!p[p.size()-1].addClient(cli_fd)){
 					throw std::runtime_error("Unable to add client to new Pollster");
 				}
-				pool.enqueue( [](Pollster* t){(*t)();}, &(p[p.size()-1]));
+				pool.enqueue( [](Pollster::Pollster* t){(*t)();}, &(p[p.size()-1]));
 			}else{
 				handler.disconnect(cli_fd, "Too many simultaneos connections...");
 			}

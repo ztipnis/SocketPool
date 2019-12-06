@@ -1,3 +1,8 @@
 [submodule "ThreadPool"]
 	path = ThreadPool
 	url = https://github.com/progschj/ThreadPool
+	branch = master
+[submodule "Pollster"]
+	path = Pollster
+	url = https://github.com/ztipnis/Pollster
+	branch = master
