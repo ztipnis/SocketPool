@@ -3,6 +3,7 @@ Socket Pooling in C++
 
 ## USAGE:
 Create Generic Functor Class capable of handling data available (`operator(int)`) and client connect (`public void connect(int)`) client disconnect (`public void disconnect(int, std::string)`).
+[See "Pollster" for more info on functor specifications](//github.com/ztipnis/Pollster)
 
 ## Example (Echo):
 ```c++
