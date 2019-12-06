@@ -2,7 +2,9 @@
 	path = ThreadPool
 	url = https://github.com/progschj/ThreadPool
 	branch = master
+	update = rebase
 [submodule "Pollster"]
 	path = Pollster
 	url = https://github.com/ztipnis/Pollster
 	branch = master
+	update = rebase
