@@ -9,8 +9,8 @@
 
 class SocketPool {
 public:
-	SocketPool(unsigned short port, const char* addr, int max_Clients, int max_Threads, const Pollster::Handler& T);
-	void listen(std::chrono::seconds gcInterval);
+	SocketPool(unsigned short port, const char* addr, int max_Clients, int max_Threads, const Pollster::Handler& T, std::chrono::seconds gcInterval);
+	void listen();
 private:
 	void accept();
 	int sock;
@@ -19,6 +19,7 @@ private:
 	int cliPerPollster;
 	int pollsters;
 	ThreadPool pool;
+	std::chrono::seconds timeout;
 };
 
 #endif

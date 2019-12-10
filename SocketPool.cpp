@@ -8,7 +8,7 @@ inline void send(int fd, std::string data, int length){
 }
 
 
-SocketPool::SocketPool(unsigned short port, const char* addr, int max_Clients, int max_Threads, const Pollster::Handler& T):sock(socket(PF_INET, SOCK_STREAM, 0)), handler(T), cliPerPollster(max_Clients/max_Threads), pollsters(max_Threads), pool(max_Threads){
+SocketPool::SocketPool(unsigned short port, const char* addr, int max_Clients, int max_Threads, const Pollster::Handler& T, std::chrono::seconds gcInterval):sock(socket(AF_INET, SOCK_STREAM, 0)), handler(T), cliPerPollster(max_Clients/max_Threads), pollsters(max_Threads), pool(max_Threads + 1), timeout(gcInterval){
 	p.reserve(max_Threads);
 	sockaddr_in sockopt;
 	if(sock < 0){
@@ -19,38 +19,35 @@ SocketPool::SocketPool(unsigned short port, const char* addr, int max_Clients, i
 	if(inet_aton(addr, &(sockopt.sin_addr)) < 0){
 		throw std::runtime_error("Listen Address Invalid");
 	}
+
+	#ifdef SO_NOSIGPIPE
+		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT | SO_NOSIGPIPE, static_cast<int*>((int[]){ 1 }), sizeof(int));
+	#else
+		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT , static_cast<int*>((int[]){ 1 }), sizeof(int));
+	#endif
 	if(bind(sock, reinterpret_cast<sockaddr*>(&sockopt), sizeof(sockopt)) < 0){
 		throw std::runtime_error("Unable to bind to port");
 	}
-	int opt = 1;
-	#ifdef SO_NOSIGPIPE
-		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT | SO_NOSIGPIPE, &opt, sizeof(opt));
-	#else
-		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT , &opt, sizeof(opt));
-	#endif
-
+	if(gcInterval.count() > 0){
+		pool.enqueue( [](std::chrono::seconds s, std::vector<Pollster::Pollster> *psters){
+			while(true){
+				sleep((*reinterpret_cast<unsigned int*>( (long []){s.count()} ) ) / 10);
+				for(unsigned int i = 0; i < psters->size(); i++){
+					(*psters)[i].cleanup();
+				}
+			}
+		}, gcInterval, &p);
+	}
 }
 
-void SocketPool::listen(std::chrono::seconds gcInterval){
+void SocketPool::listen(){
 	if(::listen(sock, 5) < 0){
 		throw std::runtime_error("Unable to listen on socket");
 	}
-	if(gcInterval.count() > 0){
-		timeval tv;
-		fd_set rfds;
-		tv.tv_sec = gcInterval.count();
-		tv.tv_usec = 0;
-		FD_ZERO(&rfds);
-		FD_SET(sock, &rfds);
-		int retval = select(1, &rfds, NULL, NULL, &tv);
-		if(retval < 0){
-			throw std::runtime_error("Polling Listening Socket Failed");
-		}else if(retval > 0){
-			this->accept();
-		}
-	}else{
-		this->accept();
+	for(unsigned int i = 0; i < p.size(); i++){
+		p[i].cleanup();
 	}
+	this->accept();
 }
 
 void SocketPool::accept(){
@@ -70,6 +67,7 @@ void SocketPool::accept(){
 		if(!assigned){
 			if(p.size() < pollsters){
 				p.emplace_back(cliPerPollster,handler);
+				p[p.size()-1].setTimeout(timeout);
 				if(!p[p.size()-1].addClient(cli_fd)){
 					throw std::runtime_error("Unable to add client to new Pollster");
 				}
