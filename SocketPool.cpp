@@ -1,4 +1,4 @@
-#import "SocketPool.hpp"
+#include "SocketPool.hpp"
 inline void send(int fd, std::string data, int length){
 	#ifndef SO_NOSIGPIPE
 		send(fd, &data[0], length, MSG_DONTWAIT | MSG_NOSIGNAL);
@@ -20,10 +20,11 @@ SocketPool::SocketPool(unsigned short port, const char* addr, int max_Clients, i
 		throw std::runtime_error("Listen Address Invalid");
 	}
 
+	static const int one(1);
 	#ifdef SO_NOSIGPIPE
-		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT | SO_NOSIGPIPE, static_cast<int*>((int[]){ 1 }), sizeof(int));
+		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT | SO_NOSIGPIPE, &one, sizeof(int));
 	#else
-		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT , static_cast<int*>((int[]){ 1 }), sizeof(int));
+		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT , &one, sizeof(int));
 	#endif
 	if(bind(sock, reinterpret_cast<sockaddr*>(&sockopt), sizeof(sockopt)) < 0){
 		throw std::runtime_error("Unable to bind to port");
@@ -31,7 +32,7 @@ SocketPool::SocketPool(unsigned short port, const char* addr, int max_Clients, i
 	if(gcInterval.count() > 0){
 		pool.enqueue( [](std::chrono::seconds s, std::vector<Pollster::Pollster> *psters){
 			while(true){
-				sleep((*reinterpret_cast<unsigned int*>( (long []){s.count()} ) ) / 10);
+				sleep(s.count() / 10);
 				for(unsigned int i = 0; i < psters->size(); i++){
 					(*psters)[i].cleanup();
 				}
