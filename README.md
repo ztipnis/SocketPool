@@ -7,7 +7,7 @@ Create Generic Functor Class capable of handling data available (`operator(int)`
 
 ## Example (Echo):
 ```c++
-#import "../SocketPool.hpp"
+#include "../SocketPool.hpp"
 
 
 class EchoHandler : public Pollster::Handler {
