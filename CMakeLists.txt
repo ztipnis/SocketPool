@@ -17,7 +17,13 @@ add_subdirectory(Pollster)
 
 add_library(SocketPool STATIC SocketPool.cpp)
 add_dependencies(SocketPool pollster)
-target_link_libraries(SocketPool pollster)
+
+#Find Threads
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
+
+target_link_libraries(SocketPool pollster Threads::Threads)
 
 install(TARGETS SocketPool DESTINATION lib)
 install(FILES SocketPool.hpp DESTINATION include)
