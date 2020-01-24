@@ -54,8 +54,16 @@ void SocketPool::listen(){
 void SocketPool::accept(){
 	sockaddr_in address;
 	socklen_t adrlen = static_cast<socklen_t>(sizeof(address));
+	int flags_a = fcntl(sock, F_GETFL, 0);
+	fcntl(sock, F_SETFL, flags_a | O_NONBLOCK);
 	int cli_fd = ::accept(sock, reinterpret_cast<sockaddr*>(&address), &adrlen);
+	while(cli_fd < 0 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == ENETDOWN || errno == EPROTO || errno == ENOPROTOOPT || errno == EHOSTDOWN || errno == EHOSTUNREACH || errno == EOPNOTSUPP || errno == ENETUNREACH)){
+		usleep(10000);
+		cli_fd = ::accept(sock, reinterpret_cast<sockaddr*>(&address), &adrlen);
+	}
 	if(cli_fd > 0){
+		int flags = fcntl(cli_fd, F_GETFL, 0);
+		fcntl(cli_fd, F_SETFL, flags | O_NONBLOCK | O_CLOEXEC);
 		bool assigned = false;
 		for(int i = 0; i < p.size(); i++){
 			if(p[i].canAddClient()){
